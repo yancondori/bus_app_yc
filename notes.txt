@@ -1,0 +1,6 @@
+modificar el vagrantfile
+aprovisionar
+
+manager
+con un nodo1
+un host deberia tener docker como minimo

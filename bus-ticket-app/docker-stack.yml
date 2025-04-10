@@ -1,0 +1,61 @@
+version: '3.9'
+
+services:
+
+  proxy:
+    image: proxy:latest
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+      placement:
+        constraints: [node.role == worker]
+    depends_on:
+      - user-auth
+      - bus-reservation
+      - payment-gateway
+      - route-scheduler
+    networks:
+      - app-network
+
+  user-auth:
+    image: user-auth:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - app-network
+
+  bus-reservation:
+    image: bus-reservation:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - app-network
+
+  payment-gateway:
+    image: payment-gateway:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - app-network
+
+  route-scheduler:
+    image: route-scheduler:latest
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: overlay

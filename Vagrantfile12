@@ -1,63 +1,61 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-22.04"
-
-  # Global synced folder (application files available)
+  
+  # Global sync folder (applies to both VMs)
   config.vm.synced_folder ".", "/vagrant"
-
-  SWARM_MASTER_IP = "192.168.33.10"
 
   # Master Node (masteryc)
   config.vm.define "masteryc" do |masteryc|
     masteryc.vm.hostname = "masteryc"
-    masteryc.vm.network "private_network", ip: SWARM_MASTER_IP
+    
+    # Network configuration
+    masteryc.vm.network "private_network", ip: "192.168.33.10"
     masteryc.vm.network "forwarded_port", guest: 80, host: 8080
-
+    
+    # VirtualBox settings
     masteryc.vm.provider "virtualbox" do |vb|
       vb.name = "masteryc"
       vb.memory = "4096"
       vb.cpus = 2
     end
 
+    # Provisioning
     masteryc.vm.provision "shell", inline: <<-SHELL
-      curl -fsSL https://get.docker.com | sh
+      # Install Docker
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sudo sh get-docker.sh
       sudo usermod -aG docker vagrant
       
-      # Install Java for Jenkins (optional)
+      # Additional master-specific provisioning
       sudo apt-get update -y
       sudo apt-get install -y openjdk-17-jdk
-
-      # Initialize Docker Swarm on Master
-      sudo docker swarm init --advertise-addr #{SWARM_MASTER_IP}
-
-      # Save Worker Join Command for easy access
-      sudo docker swarm join-token worker -q > /vagrant/worker_token
     SHELL
   end
 
   # Worker Node (nodoyc)
   config.vm.define "nodoyc" do |nodoyc|
     nodoyc.vm.hostname = "nodoyc"
+    
+    # Network configuration
     nodoyc.vm.network "private_network", ip: "192.168.33.11"
-
+    
+    # VirtualBox settings
     nodoyc.vm.provider "virtualbox" do |vb|
       vb.name = "nodoyc"
       vb.memory = "2048"
       vb.cpus = 1
     end
 
+    # Provisioning
     nodoyc.vm.provision "shell", inline: <<-SHELL
-      curl -fsSL https://get.docker.com | sh
+      # Install Docker
+      curl -fsSL https://get.docker.com -o get-docker.sh
+      sudo sh get-docker.sh
       sudo usermod -aG docker vagrant
-
+      
+      # Additional worker-specific provisioning
       sudo apt-get update -y
       sudo apt-get install -y python3
-
-      # Wait for the Master token to become available
-      while [ ! -f /vagrant/worker_token ]; do sleep 2; done
-
-      # Retrieve token and join swarm
-      SWARM_TOKEN=$(cat /vagrant/worker_token)
-      sudo docker swarm join --token $SWARM_TOKEN #{SWARM_MASTER_IP}:2377
     SHELL
   end
 end
